@@ -17,10 +17,15 @@ class Workout {
   date = new Date();
   id = (Date.now() + '').slice(-10);
   popupContent = ``;
+  clicks = 0;
   constructor(coords, distance, duration) {
     this.coords = coords;
     this.distance = distance; //in km
     this.duration = duration; //in min
+  }
+
+  click() {
+    this.click++;
   }
 }
 
@@ -55,11 +60,13 @@ class App {
   workouts = [];
   #map;
   #mapEvent;
+  #mapZoomLev = 13;
 
   constructor() {
     this._getPosition();
     inputType.addEventListener('change', this._toggleElevationField.bind(this));
     form.addEventListener('submit', this._newWorkout.bind(this));
+    containerWorkouts.addEventListener('click', this._moveToPoppup.bind(this));
   }
 
   _getPosition() {
@@ -73,7 +80,7 @@ class App {
     // console.log(`https://www.google.com/maps/@${latitude},${longitude}`);
     const coords = [latitude, longitude];
 
-    this.#map = L.map('map').setView(coords, 13); //13 is zoom level of map showing on screen
+    this.#map = L.map('map').setView(coords, this.#mapZoomLev); //13 is zoom level of map showing on screen
 
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution:
@@ -251,6 +258,20 @@ class App {
     form.classList.add('hidden');
     setTimeout(() => (form.style.display = 'grid'), 1000);
   }
+
+  _moveToPoppup(e) {
+    const workoutEl = e.target.closest('.workout');
+    if (!workoutEl) return;
+    const workout = this.workouts.find(el => el.id === workoutEl.dataset.id);
+    this.#map.setView(workout.coords, this.#mapZoomLev, {
+      animate: true,
+      pan: {
+        duration: 1,
+      },
+    });
+    workout.click();
+  }
+
 }
 
 const app = new App();
