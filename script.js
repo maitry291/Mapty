@@ -27,6 +27,31 @@ class Workout {
   click() {
     this.click++;
   }
+
+  _setDescription() {
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    // console.log(this.type);
+    let str = `${this.type}`.charAt(0).toUpperCase() + `${this.type}`.slice(1);
+    if (str === `Running`) str = `🏃‍♂️ ` + str;
+    else str = `🚴‍♀️ ` + str;
+
+    this.popupContent = `${str} on  ${
+      months[this.date.getMonth()]
+    } ${this.date.getDate()}`;
+  }
 }
 
 class Running extends Workout {
@@ -34,6 +59,7 @@ class Running extends Workout {
   constructor(coords, distance, duration, cadence) {
     super(coords, distance, duration);
     this.cadence = cadence;
+    this._setDescription();
     this.calcPace();
   }
   calcPace() {
@@ -47,6 +73,7 @@ class Cycling extends Workout {
   constructor(coords, distance, duration, elevation) {
     super(coords, distance, duration);
     this.elevation = elevation;
+    this._setDescription();
     this.calcSpeed();
   }
   calcSpeed() {
@@ -64,6 +91,11 @@ class App {
 
   constructor() {
     this._getPosition();
+
+    //get data from local storafe
+    this._getLocalStorage();
+
+    //attach event handlers
     inputType.addEventListener('change', this._toggleElevationField.bind(this));
     form.addEventListener('submit', this._newWorkout.bind(this));
     containerWorkouts.addEventListener('click', this._moveToPoppup.bind(this));
@@ -75,7 +107,6 @@ class App {
     }
   }
   _loadMap(position) {
-    console.log(position);
     const { latitude, longitude } = position.coords;
     // console.log(`https://www.google.com/maps/@${latitude},${longitude}`);
     const coords = [latitude, longitude];
@@ -90,6 +121,11 @@ class App {
     L.marker(coords).addTo(this.#map).bindPopup('You are here👋🏻').openPopup();
     // this._showForm();
     this.#map.on('click', this._showForm.bind(this));
+
+    this.workouts.forEach(workout => {
+      //at this time map is loaded so it works fine
+      this._renderWorkoutMarker(workout);
+    });
   }
 
   _showForm(mapE) {
@@ -153,10 +189,13 @@ class App {
 
     //clear input fields
     this._hideForm();
+
+    //store workouts in local storage
+    this._setLocalStorage();
   }
 
   _renderWorkoutMarker(workout) {
-    this._setDescription(workout);
+    // this._setDescription(workout);
 
     L.marker(workout.coords)
       .addTo(this.#map)
@@ -221,33 +260,6 @@ class App {
     form.insertAdjacentHTML('afterend', html);
   }
 
-  _setDescription(workout) {
-    const months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-
-    let type =
-      `${workout.type}`.charAt(0).toUpperCase() + `${workout.type}`.slice(1);
-    if (type === `Running`) type = `🏃‍♂️ ` + type;
-    else type = `🚴‍♀️ ` + type;
-    const popupContent = `${type} on  ${
-      months[workout.date.getMonth()]
-    } ${workout.date.getDate()}`;
-
-    workout.popupContent = popupContent;
-  }
-
   _hideForm() {
     inputDistance.value =
       inputDuration.value =
@@ -269,9 +281,32 @@ class App {
         duration: 1,
       },
     });
-    workout.click();
+    // console.log(typeof workout);
+    // workout.click();  //workout is just object not running/cycling object
   }
 
+  _setLocalStorage() {
+    localStorage.setItem('workouts', JSON.stringify(this.workouts));
+  }
+
+  _getLocalStorage() {
+    const data = JSON.parse(localStorage.getItem('workouts'));
+
+    if (!data) return;
+
+    this.workouts = data;
+
+    this.workouts.forEach(workout => {
+      this._renderWorkout(workout);
+      //we can't render here as map won't be loaded when we call this method
+      //   this._renderWorkoutMarker(workout);
+    });
+  }
+
+  reset() {
+    localStorage.removeItem('workouts');
+    location.reload();
+  }
 }
 
 const app = new App();
